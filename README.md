@@ -19,6 +19,22 @@ Construir un pipeline de datos capaz de:
 
 **Principio del MVP:** priorizar la calidad, trazabilidad y reproducibilidad de los datos antes que ampliar la cantidad de fuentes o productos.
 
+### Problemas clave del proyecto y responsabilidad de este repo
+
+El equipo enfrenta tres problemas técnicos centrales (detalle en `problematica.md` en la raíz del proyecto; plan de trabajo ágil en `PLAN-AGIL.md`). Este repo es el origen del flujo de datos:
+
+| Problema | Responsabilidad del Data | Decisión clave |
+|---|---|---|
+| **1. Identidad de productos entre tiendas** | Extraer `external_id`, nombre crudo, marca, categoría y URL por publicación. Normalizar strings y producir sugerencias de similitud (fuzzy matching) para apoyar el mapeo. | El matching final es **curado manualmente** en el Backend; el pipeline solo aporta datos crudos y sugerencias, nunca asume equivalencias por sí solo. |
+| **2. Promociones, stock y reduflación** | Extraer `price`, `price_before` (precio tachado), `is_available` y señales de promo (badge "oferta", "2x1"). Capturar presentación/gramaje crudo para habilitar la detección de reduflación. | El pipeline clasifica señales, pero la regla de "precio regular vs promo" y la exclusión de promos del índice viven en el Backend. |
+| **3. Sincronización timestamp ↔ tipo de cambio** | Guardar `observed_at` y `fetched_at` en cada registro. Ingesta horaria de FX con su propio timestamp. **No convertir a USD en el scraper.** | Se persiste moneda local cruda; la conversión a USD la realiza el Backend en consulta con el FX as-of. |
+
+Flujo de datos y orden de dependencias:
+
+- Este pipeline recolecta y entrega observaciones crudas (precios en moneda local + FX con timestamp).
+- El Backend define el esquema y los contratos; puede avanzar en paralelo mientras se usa el contrato JSON acordado.
+- El Frontend consume el API del Backend, no este pipeline directamente.
+
 ## 2. Alcance
 
 ### Incluido
@@ -124,11 +140,15 @@ Todos los collectors deben entregar registros con una estructura común, indepen
   "external_id": "SKU-123",
   "source_url": "https://example.com/product/123",
   "product_name": "Producto de ejemplo",
+  "raw_presentation": "500 g",
   "brand": "Marca de ejemplo",
   "category": "Electrónica",
   "price": 12990,
+  "price_before": 15990,
   "currency_code": "CLP",
-  "is_promotion": false,
+  "is_promotion": true,
+  "promo_badge": "Oferta",
+  "is_available": true,
   "observed_at": "2026-10-16T08:00:00Z",
   "fetched_at": "2026-10-16T08:00:05Z"
 }
@@ -139,14 +159,16 @@ Este ejemplo es ilustrativo. Debe ajustarse al esquema acordado con el backend a
 ### Reglas importantes
 
 - `price` debe ser numérico y mayor que cero.
+- `price_before` (precio tachado) es opcional; si existe, debe ser mayor que `price`.
 - `currency_code` debe utilizar códigos normalizados, por ejemplo `CLP`, `USD` o `EUR`.
 - `source` debe identificar de manera consistente la tienda o fuente.
 - `external_id` puede ser nulo si la tienda no expone un identificador confiable.
 - `source_url` debe identificar la publicación observada.
+- `raw_presentation` (gramaje, volumen, cantidad) es opcional pero clave para detectar reduflación en el Backend.
 - `observed_at` representa el momento al que corresponde el precio.
 - `fetched_at` representa el momento en que el sistema obtuvo el registro.
 - Las fechas deben utilizar una convención consistente, preferentemente UTC.
-- No se deben reemplazar los precios originales por valores convertidos a otra moneda.
+- **No se deben reemplazar los precios originales por valores convertidos a otra moneda.** La conversión a USD es responsabilidad del Backend, que la calcula en consulta con el FX correspondiente al `observed_at`.
 - Los registros inválidos deben rechazarse o marcarse explícitamente; nunca corregirse silenciosamente mediante valores inventados.
 
 ## 6. Recolección de precios
@@ -204,6 +226,12 @@ La frecuencia de consulta —por ejemplo, horaria— debe depender de las capaci
 
 **Importante:** consultar una API cada hora no significa que el tipo de cambio publicado cambie cada hora. Se debe conservar la fecha efectiva de la tasa proporcionada por la fuente.
 
+### Reglas de sincronización temporal (problema 3)
+
+- Cada tasa debe persistirse con su `observed_at` efectivo (el de la fuente) y `fetched_at`.
+- Ingesta **horaria** como frecuencia mínima del job (o la que permita la API), pero la tasa se usa luego por proximidad temporal: el Backend resolverá la cotización vigente al timestamp de cada observación de precio (join as-of).
+- El pipeline **no** debe usar el tipo de cambio para convertir precios; solo lo entrega como serie independiente con su timestamp.
+
 ## 8. Normalización de precios y productos
 
 La normalización busca que los datos de distintas tiendas puedan compararse sin perder la información original.
@@ -222,10 +250,15 @@ La normalización busca que los datos de distintas tiendas puedan compararse sin
 - Limpiar espacios y caracteres innecesarios en los nombres.
 - Normalizar campos de marca y categoría cuando sea posible.
 - Conservar el nombre original publicado por la tienda.
-- Mantener un identificador por publicación.
+- Mantener un identificador por publicación (`external_id`).
 - No asumir que dos nombres similares representan el mismo producto.
 
-Para el MVP, se recomienda utilizar identificadores confiables, como SKU, código de barras o una relación revisada manualmente, cuando estén disponibles. El matching avanzado entre productos queda fuera del alcance inicial.
+Para el MVP, el matching final entre publicaciones de distintas tiendas y el producto canónico es **curado manualmente** (en el Backend). Este pipeline aporta dos apoyos, sin decidir por sí solo:
+
+1. **Normalización de strings** (minúsculas, sin acentos innecesarios, sin ruido de marca/marketing) para comparar nombres de forma consistente.
+2. **Sugerencias de similitud** (fuzzy matching, p. ej. ratio de similitud) entre nombres crudos y el catálogo canónico, para acelerar el curado humano.
+
+Identificadores confiables (SKU, código de barras) siempre tienen prioridad sobre la similitud de texto cuando están disponibles.
 
 ## 9. Calidad de datos
 
