@@ -1,12 +1,16 @@
-"""Cliente FX genérico (HU 3.1).
+"""Cliente FX genérico (HU 3.1) — proveedor **Bluelytics** (decisión #2 ✅ 2026-10-25).
 
-Decisión #2 pendiente (DolarAPI / Bluelytics / Open Exchange Rates): el proveedor
-elegido debe poder devolver oficial + paralelo. Mientras tanto se asume este JSON:
+GET https://api.bluelytics.com.ar/v2/latest devuelve oficial + paralelo (blue) en una
+sola respuesta, sin API key:
 
-    {"timestamp": "2026-10-25T12:00:00+00:00", "oficial": 1234.5, "paralelo": 1300.0}
+    {"oficial": {"value_buy": ..., "value_sell": ..., "value_avg": ...},
+     "blue":    {"value_buy": ..., "value_sell": ..., "value_avg": ...},
+     "last_update": "2026-10-23T19:45:56.466322-03:00"}
 
-`timestamp` opcional: si la fuente no lo expone, se usa el de la consulta.
-Adaptar `_parse` a la respuesta real al resolverse la decisión #2.
+- `tipo_cambio_*` = `value_sell` (venta ARS por USD).
+- `timestamp` = `last_update` de la fuente (efectivo); si no existe, el de la consulta.
+  Como `last_update` cambia solo cuando la fuente actualiza, el upsert por PK de
+  `historial_divisas` es idempotente entre corridas horarias.
 """
 
 import logging
@@ -54,9 +58,9 @@ def fetch_rates(
 
 
 def _parse(payload: dict) -> ExchangeRateObservation:
-    timestamp = payload.get("timestamp") or datetime.now(timezone.utc).isoformat()
+    timestamp = payload.get("last_update") or datetime.now(timezone.utc).isoformat()
     return ExchangeRateObservation(
         timestamp=timestamp,
-        tipo_cambio_oficial=Decimal(str(payload["oficial"])),
-        tipo_cambio_paralelo=Decimal(str(payload["paralelo"])),
+        tipo_cambio_oficial=Decimal(str(payload["oficial"]["value_sell"])),
+        tipo_cambio_paralelo=Decimal(str(payload["blue"]["value_sell"])),
     )
