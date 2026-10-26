@@ -13,8 +13,8 @@ STORES: dict[str, Store] = {
     "coto": Store(
         key="coto",
         nombre="Coto",
-        dominio="www.cotodigital3.com.ar",
-        url_base="https://www.cotodigital3.com.ar",
+        dominio="www.coto.com.ar",
+        url_base="https://www.coto.com.ar",
     ),
     "carrefour": Store(
         key="carrefour",
@@ -25,7 +25,7 @@ STORES: dict[str, Store] = {
     "cetrogar": Store(
         key="cetrogar",
         nombre="Cetrogar",
-        dominio="www.cetrogar.com",
-        url_base="https://www.cetrogar.com",
+        dominio="www.cetrogar.com.ar",
+        url_base="https://www.cetrogar.com.ar",
     ),
 }
