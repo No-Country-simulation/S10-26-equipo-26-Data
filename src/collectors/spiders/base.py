@@ -38,6 +38,11 @@ class BaseStoreSpider(scrapy.Spider):
         self._extraidas = 0
         self._errores = 0
 
+    async def start(self):
+        # Scrapy >= 2.13 arranca por start(); desde 2.19 ya no llama solo a start_requests().
+        for request in self.start_requests():
+            yield request
+
     def start_requests(self):
         for row in load_targets(self.store):
             url = (row.get("url") or "").strip()
