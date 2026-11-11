@@ -39,11 +39,12 @@ def test_start_genera_un_request_por_target() -> None:
 
 
 def test_parse_con_fixture_genera_observacion_valida() -> None:
-    body = (FIXTURES / "no_promo.html").read_text(encoding="utf-8")
-    target = load_targets("carrefour")[0]
+    # aceite_natura (fixture del equipo) tiene stock > 0 (regla del extractor)
+    body = (FIXTURES / "aceite_natura.html").read_text(encoding="utf-8")
+    url = "https://www.carrefour.com.ar/aceite-de-girasol-natura-15-l/p"
     request = Request(
-        target["url"],
-        cb_kwargs={"producto_id": int(target["producto_id"]), "external_id": None},
+        url,
+        cb_kwargs={"producto_id": 2, "external_id": None},
     )
     response = HtmlResponse(
         url=request.url,
@@ -57,7 +58,7 @@ def test_parse_con_fixture_genera_observacion_valida() -> None:
     assert len(items) == 1
     item = items[0]
     assert item["store"] == "carrefour"
-    assert item["source_url"] == target["url"]
+    assert item["source_url"] == url
     assert item["observed_at"] is not None
     assert item["fetched_at"] is not None
 

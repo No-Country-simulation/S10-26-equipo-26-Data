@@ -2,6 +2,7 @@ import csv
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 import scrapy
 
@@ -29,7 +30,7 @@ class BaseStoreSpider(scrapy.Spider):
     """Solo orquestación: targets → requests → extractor puro (ver extractors/)."""
 
     store: str = ""
-    extractor = None
+    extractor: Any = None
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

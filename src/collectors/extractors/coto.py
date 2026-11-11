@@ -71,15 +71,20 @@ def _discount_price(attributes: dict) -> Decimal | None:
         discounts = json.loads(raw)
     except json.JSONDecodeError:
         return None
-    prices = [_to_decimal(d.get("precioDesc")) for d in discounts if isinstance(d, dict)]
-    prices = [p for p in prices if p is not None]
-    return min(prices) if prices else None
+    precios: list[Decimal] = []
+    for descuento in discounts:
+        if not isinstance(descuento, dict):
+            continue
+        precio = _to_decimal(descuento.get("precioDesc"))
+        if precio is not None:
+            precios.append(precio)
+    return min(precios) if precios else None
 
 
 def _category(block: dict, attributes: dict) -> str | None:
     # breadcrumbs: [{"name": "CotoDigital"}, {"name": "Almacén"}, ..., {"name": "Mate"}]
-    names = [
-        b.get("name")
+    names: list[str] = [
+        str(b.get("name"))
         for b in block.get("breadcrumbs") or []
         if isinstance(b, dict) and b.get("name") and b.get("name") != ROOT_CATEGORY
     ]

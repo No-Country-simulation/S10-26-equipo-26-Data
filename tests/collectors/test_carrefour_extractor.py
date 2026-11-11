@@ -71,3 +71,28 @@ def test_pagina_sin_state_falla():
 
     with pytest.raises(ExtractionError):
         carrefour.parse_product(response, producto_id=1)
+
+
+URL_PROMO = "https://www.carrefour.com.ar/tapas-para-pastelitos-carrefour-classic-24-u/p"
+
+
+def test_promo_con_precio_tachado(load_fixture):
+    """Fixture real CON oferta: list 3990 -> selling 3591 (10% off)."""
+    response = _response(URL_PROMO, load_fixture("carrefour/promo.html"))
+
+    data = carrefour.parse_product(response, producto_id=1)
+
+    assert data["price"] == Decimal("3591")
+    assert data["precio_tachado"] == Decimal("3990")
+    assert data["en_oferta"] is True
+    assert data["precio_tachado"] > data["price"]
+
+
+def test_pagina_404_sin_producto_falla(load_fixture):
+    response = _response(
+        "https://www.carrefour.com.ar/producto-que-no-existe-123456/p",
+        load_fixture("carrefour/empty.html"),
+    )
+
+    with pytest.raises(ExtractionError):
+        carrefour.parse_product(response, producto_id=1)
