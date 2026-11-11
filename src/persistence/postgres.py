@@ -22,9 +22,24 @@ DEDUP_VENTANA_MIN = 10
 _INSERT_OBSERVACION = """
 INSERT INTO precios_historicos
     (timestamp, producto_id, tienda_id, precio_local, precio_tachado, en_oferta,
-     tipo_cambio_usado, precio_usd)
-VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+     tipo_cambio_usado, precio_usd, raw_presentation)
+VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
 """
+
+
+def _observation_params(obs: PriceObservation, tienda_id: int) -> tuple:
+    """Parametros del INSERT (separable para testear sin BD — HU 2.4)."""
+    return (
+        obs.observed_at,
+        obs.producto_id,
+        tienda_id,
+        obs.price,
+        obs.precio_tachado,
+        obs.en_oferta,
+        obs.fx_rate,
+        obs.price_usd,
+        obs.raw_presentation,
+    )
 
 _DEDUP_OBSERVACION = """
 SELECT 1 FROM precios_historicos
@@ -86,16 +101,7 @@ class PostgresWriter:
                 return
             cur.execute(
                 _INSERT_OBSERVACION,
-                (
-                    obs.observed_at,
-                    obs.producto_id,
-                    tienda_id,
-                    obs.price,
-                    obs.precio_tachado,
-                    obs.en_oferta,
-                    obs.fx_rate,
-                    obs.price_usd,
-                ),
+                _observation_params(obs, tienda_id),
             )
 
     def upsert(self, rate: ExchangeRateObservation) -> None:
