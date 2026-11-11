@@ -58,7 +58,16 @@ def fetch_rates(
 
 
 def _parse(payload: dict) -> ExchangeRateObservation:
-    timestamp = payload.get("last_update") or datetime.now(timezone.utc).isoformat()
+    last_update = payload.get("last_update")
+    if isinstance(last_update, datetime):
+        timestamp = last_update
+    elif isinstance(last_update, str):
+        try:
+            timestamp = datetime.fromisoformat(last_update)
+        except ValueError:
+            timestamp = datetime.now(timezone.utc)
+    else:
+        timestamp = datetime.now(timezone.utc)
     return ExchangeRateObservation(
         timestamp=timestamp,
         tipo_cambio_oficial=Decimal(str(payload["oficial"]["value_sell"])),
