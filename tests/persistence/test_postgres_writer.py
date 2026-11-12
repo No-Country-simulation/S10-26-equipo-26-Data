@@ -65,3 +65,10 @@ def test_params_aceptan_presentacion_ausente() -> None:
 
     assert params[-1] is None
     assert params[3] == Decimal("500.00")
+
+def test_upsert_store_product_sql() -> None:
+    from src.persistence.postgres import _UPSERT_STORE_PRODUCT
+
+    assert "ON CONFLICT (tienda_id, external_id)" in _UPSERT_STORE_PRODUCT
+    assert "store_products" in _UPSERT_STORE_PRODUCT
+    assert _UPSERT_STORE_PRODUCT.count("%s") == 7

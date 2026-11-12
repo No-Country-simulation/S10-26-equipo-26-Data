@@ -47,6 +47,19 @@ WHERE producto_id = %s AND tienda_id = %s AND timestamp >= %s
 LIMIT 1
 """
 
+_UPSERT_STORE_PRODUCT = """
+INSERT INTO store_products
+    (producto_id, tienda_id, external_id, source_url, nombre_crudo,
+     marca_cruda, raw_presentation)
+VALUES (%s, %s, %s, %s, %s, %s, %s)
+ON CONFLICT (tienda_id, external_id) DO UPDATE SET
+    producto_id = COALESCE(EXCLUDED.producto_id, store_products.producto_id),
+    source_url = COALESCE(EXCLUDED.source_url, store_products.source_url),
+    nombre_crudo = EXCLUDED.nombre_crudo,
+    marca_cruda = COALESCE(EXCLUDED.marca_cruda, store_products.marca_cruda),
+    raw_presentation = COALESCE(EXCLUDED.raw_presentation, store_products.raw_presentation)
+"""
+
 _UPSERT_FX = """
 INSERT INTO historial_divisas (timestamp, tipo_cambio_oficial, tipo_cambio_paralelo)
 VALUES (%s, %s, %s)
@@ -91,6 +104,22 @@ class PostgresWriter:
     def write(self, obs: PriceObservation) -> None:
         tienda_id = self._tienda_id(obs.store)
         with self._conn.cursor() as cur:
+            # store_products primero (HU 1.2): identidad de la publicacion.
+            # external_id es NOT NULL: si el extractor no lo trae, se omite el
+            # upsert (no se inventa identidad).
+            if obs.external_id:
+                cur.execute(
+                    _UPSERT_STORE_PRODUCT,
+                    (
+                        obs.producto_id,
+                        tienda_id,
+                        obs.external_id,
+                        obs.source_url,
+                        obs.product_name,
+                        obs.brand,
+                        obs.raw_presentation,
+                    ),
+                )
             cur.execute(_DEDUP_OBSERVACION, (obs.producto_id, tienda_id, self._desde))
             if cur.fetchone() is not None:
                 logger.info(
@@ -99,6 +128,12 @@ class PostgresWriter:
                     obs.producto_id,
                 )
                 return
+            logger.info(
+                "observacion_insert store=%s producto_id=%s raw_presentation=%r",
+                obs.store,
+                obs.producto_id,
+                obs.raw_presentation,
+            )
             cur.execute(
                 _INSERT_OBSERVACION,
                 _observation_params(obs, tienda_id),

@@ -2,10 +2,13 @@
 
     python -m src.collectors.run --store fake
     python -m src.collectors.run --store coto [--dry-run]
+    python -m src.collectors.run --store all [--dry-run]   # coto+carrefour+cetrogar
 """
 
 import argparse
 import sys
+
+STORES_REALES = ("coto", "carrefour", "cetrogar")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -13,7 +16,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--store",
         required=True,
-        choices=["fake", "coto", "carrefour", "cetrogar"],
+        choices=["fake", "all", *STORES_REALES],
     )
     parser.add_argument(
         "--dry-run",
@@ -41,7 +44,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.dry_run:
         settings.set("DRY_RUN", True, priority="cmdline")
     process = CrawlerProcess(settings)
-    process.crawl(args.store)
+    stores = STORES_REALES if args.store == "all" else (args.store,)
+    for store in stores:
+        process.crawl(store)
     process.start()
     return 0
 
