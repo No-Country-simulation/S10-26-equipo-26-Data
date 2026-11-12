@@ -480,6 +480,8 @@ Las pruebas automatizadas no deben depender del estado cambiante de una tienda r
 
 ## 16. Riesgos y decisiones pendientes
 
+> **2026-11-11:** decisiones #1–#8 de `PLAN-AGIL.md` **resueltas** (A formalizada, Bluelytics, 3 tiendas, `raw_presentation`, migración `0002` con `store_products`/`anomaly_alerts`). E2E verificado: `run --store coto` persiste en BD local (10/10 con FX real).
+
 Antes de ampliar el pipeline, confirmar:
 
 1. Qué tiendas se utilizarán y qué métodos de acceso permiten.
