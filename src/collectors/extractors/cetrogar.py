@@ -74,8 +74,10 @@ def parse_product(response, producto_id: int, external_id: str | None = None) ->
     if not offers:
         raise ExtractionError("sin_oferta: el producto no tiene offers")
     offer = offers[0]
-    if offer.get("availability") != IN_STOCK:
-        raise ExtractionError(f"sin_stock: availability={offer.get('availability')}")
+    # HU 2.1: registrar stock aunque no esté disponible en vez de descartar.
+    # Sin campo availability → None (desconocido).
+    availability = offer.get("availability")
+    disponible = None if not availability else availability == IN_STOCK
 
     price = _to_decimal(offer.get("price"))
     if price is None:
@@ -92,6 +94,7 @@ def parse_product(response, producto_id: int, external_id: str | None = None) ->
         "price": price,
         "precio_tachado": precio_tachado,
         "en_oferta": precio_tachado is not None,
+        "disponible": disponible,
         "raw_presentation": name,
         "brand": (product.get("brand") or {}).get("name"),
         "category": _category(product),

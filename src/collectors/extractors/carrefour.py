@@ -85,9 +85,11 @@ def parse_product(response, producto_id: int, external_id: str | None = None) ->
 
     price = _to_decimal(offer.get("Price"))
     list_price = _to_decimal(offer.get("ListPrice"))
-    # VTEX pone Price = 0 cuando no hay stock; eso no es un precio real.
-    if not price or price <= 0 or not offer.get("AvailableQuantity"):
-        raise ExtractionError("sin_stock: precio 0 o cantidad disponible 0")
+    # VTEX pone Price = 0 cuando no hay stock; sin precio no hay observación.
+    if not price or price <= 0:
+        raise ExtractionError("sin_precio: precio 0 o ausente")
+    # AvailableQuantity = 0 → sin stock, pero se registra (HU 2.1 disponibilidad).
+    disponible = bool(offer.get("AvailableQuantity"))
 
     # Precio tachado solo si el de lista es mayor que el que se paga hoy.
     precio_tachado = list_price if list_price and list_price > price else None
@@ -110,6 +112,7 @@ def parse_product(response, producto_id: int, external_id: str | None = None) ->
         "price": price,
         "precio_tachado": precio_tachado,
         "en_oferta": en_oferta,
+        "disponible": disponible,
         "raw_presentation": sku_name,
         "brand": product.get("brand"),
         "category": category_list[0] if category_list else None,

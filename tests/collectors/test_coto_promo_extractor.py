@@ -43,6 +43,7 @@ def test_aceite_en_oferta(load_fixture):
     assert data["price"] == Decimal("5970.45")
     assert data["precio_tachado"] == Decimal("7464")
     assert data["en_oferta"] is True
+    assert data["disponible"] is None  # HU 2.1: Coto no expone stock
     assert data["brand"] == "NATURA"
     assert data["category"] == "/Almacén/Aceites y Condimentos/Aceites/Aceite Girasol/"
 
@@ -86,6 +87,7 @@ def test_yerba_sin_oferta(load_fixture):
     assert data["price"] == Decimal("2800")
     assert data["precio_tachado"] is None
     assert data["en_oferta"] is False
+    assert data["disponible"] is None  # HU 2.1: Coto no expone stock
     assert data["brand"] == "PLAYADITO"
     assert data["category"] == "/Almacén/Infusiones/Mate/Yerba/"
     assert parse_presentation(data["raw_presentation"]) == (Decimal("500"), "g")

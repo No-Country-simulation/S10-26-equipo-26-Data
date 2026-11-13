@@ -33,8 +33,24 @@ def test_parse_product_aceite_sin_oferta(load_fixture):
     assert data["price"] == Decimal("7469")
     assert data["precio_tachado"] is None
     assert data["en_oferta"] is False
+    assert data["disponible"] is True  # HU 2.1: AvailableQuantity > 0
     assert data["brand"] == "Natura"
     assert data["category"] == "/Almacén/Aceites y vinagres/Aceites comunes/"
+
+
+def test_sin_stock_registra_disponible_false(load_fixture):
+    """HU 2.1: cantidad 0 → observación con disponible=False (no se descarta)."""
+    import re
+
+    body = re.sub(
+        r'"AvailableQuantity":\d+', '"AvailableQuantity":0', load_fixture("carrefour/aceite_natura.html")
+    )
+    response = _response(URL_ACEITE, body)
+
+    data = carrefour.parse_product(response, producto_id=2)
+
+    assert data["disponible"] is False
+    assert data["price"] == Decimal("7469")
 
 
 def test_presentacion_se_puede_normalizar(load_fixture):

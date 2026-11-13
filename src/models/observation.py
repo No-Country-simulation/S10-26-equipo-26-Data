@@ -20,6 +20,7 @@ class PriceObservation(BaseModel):
     price: Decimal = Field(gt=0)  # → precio_local (NOT NULL)
     precio_tachado: Decimal | None = None  # → precio_tachado (si existe, > price)
     en_oferta: bool = False  # → en_oferta (señal visible: badge "oferta", "2x1")
+    disponible: bool | None = None  # → disponible (stock del scrape; None = desconocido)
     observed_at: datetime  # → timestamp (UTC)
 
     # ── calculados por el pipeline (NO por el extractor) ──────────────

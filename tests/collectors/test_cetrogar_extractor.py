@@ -33,8 +33,23 @@ def test_tv_en_oferta(load_fixture):
     assert data["price"] == Decimal("749999")
     assert data["precio_tachado"] == Decimal("849999")
     assert data["en_oferta"] is True
+    assert data["disponible"] is True  # HU 2.1: availability = InStock
     assert data["brand"] == "Samsung"
     assert data["category"] == "/Tecnología/Tv y Video/Smart TV/"
+
+
+def test_out_of_stock_registra_disponible_false(load_fixture):
+    """HU 2.1: availability != InStock → disponible=False, no se descarta."""
+    body = load_fixture("cetrogar/smart_tv_samsung_50.html").replace(
+        '"availability":"https://schema.org/InStock"',
+        '"availability":"https://schema.org/OutOfStock"',
+    )
+    response = _response(URL_TV, body)
+
+    data = cetrogar.parse_product(response, producto_id=8)
+
+    assert data["disponible"] is False
+    assert data["price"] == Decimal("749999")
 
 
 def test_cumple_el_contrato(load_fixture):

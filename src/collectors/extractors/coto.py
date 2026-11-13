@@ -127,6 +127,9 @@ def parse_product(response, producto_id: int, external_id: str | None = None) ->
         "price": price,
         "precio_tachado": precio_tachado,
         "en_oferta": en_oferta,
+        # El JSON de Coto no expone stock (sku.quantity es la medida del
+        # producto, ej. "500"): desconocido (HU 2.1).
+        "disponible": None,
         "raw_presentation": name,
         "brand": _first(attributes, "product.brand"),
         "category": _category(block, attributes),

@@ -22,8 +22,8 @@ DEDUP_VENTANA_MIN = 10
 _INSERT_OBSERVACION = """
 INSERT INTO precios_historicos
     (timestamp, producto_id, tienda_id, precio_local, precio_tachado, en_oferta,
-     tipo_cambio_usado, precio_usd, raw_presentation)
-VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+     tipo_cambio_usado, precio_usd, raw_presentation, disponible)
+VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 """
 
 
@@ -39,6 +39,7 @@ def _observation_params(obs: PriceObservation, tienda_id: int) -> tuple:
         obs.fx_rate,
         obs.price_usd,
         obs.raw_presentation,
+        obs.disponible,
     )
 
 _DEDUP_OBSERVACION = """
